@@ -9,8 +9,34 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
 import com.example.cinematown.ui.theme.CinemaTownTheme
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.remember
+import androidx.compose.ui.unit.dp
+import io.github.jan.supabase.createSupabaseClient
+import io.github.jan.supabase.postgrest.Postgrest
+import io.github.jan.supabase.postgrest.from
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import java.io.FileInputStream
+import java.util.Properties
+import androidx.compose.ui.platform.LocalContext
+import java.io.File
+
+//val properties = readConfidentialProperties("CinemaTown/app/confidential.properties")
+
+val supabase = createSupabaseClient(
+    supabaseUrl = BuildConfig.API_URL,
+    supabaseKey = BuildConfig.API_KEY,
+) {
+    install(Postgrest)
+}
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -22,7 +48,7 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    Greeting("Android")
+                    CountriesList()
                 }
             }
         }
@@ -30,17 +56,23 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
-    )
-}
-
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    CinemaTownTheme {
-        Greeting("Android")
+fun CountriesList() {
+    var countries by remember { mutableStateOf<List<Country>>(listOf()) }
+    LaunchedEffect(Unit) {
+        withContext(Dispatchers.IO) {
+            countries = supabase.from("countries")
+                .select().decodeList<Country>()
+        }
+    }
+    LazyColumn {
+        items(
+            countries,
+            key = { country -> country.id },
+        ) { country ->
+            Text(
+                country.name,
+                modifier = Modifier.padding(8.dp),
+            )
+        }
     }
 }
